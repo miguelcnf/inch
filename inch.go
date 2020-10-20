@@ -320,29 +320,31 @@ func (s *Simulator) generateBatches() <-chan []byte {
 		lastWrittenTotal := s.WrittenN()
 
 		// For generating tag string.
-		var tags []byte
+		// var tags []byte
+		tag := []byte(",tag=value")
 
 		// For writing space between tags and field.
 		space := []byte(" ")
 
 		// Generate field string.
 		var fields []byte
-		for i := 0; i < s.FieldsPerPoint; i++ {
-			var delim string
-			if i < s.FieldsPerPoint-1 {
-				delim = ","
-			}
 
-			// First field doesn't have a number incremented.
-			pair := fmt.Sprintf("%s=1%s", s.FieldPrefix, delim)
-			if i > 0 {
-				pair = fmt.Sprintf("%s%d=1%s", s.FieldPrefix, i, delim)
-			}
-			fields = append(fields, []byte(pair)...)
-		}
+		// for i := 0; i < s.FieldsPerPoint; i++ {
+		// 	var delim string
+		// 	if i < s.FieldsPerPoint-1 {
+		// 		delim = ","
+		// 	}
+		//
+		// 	// First field doesn't have a number incremented.
+		// 	pair := fmt.Sprintf("%s=1%s", s.FieldPrefix, delim)
+		// 	if i > 0 {
+		// 		pair = fmt.Sprintf("%s%d=1%s", s.FieldPrefix, i, delim)
+		// 	}
+		// 	fields = append(fields, []byte(pair)...)
+		// }
 
 		// Size internal buffer to consider mx+tags+ +fields.
-		buf := bytes.NewBuffer(make([]byte, 0, 2+len(tags)+1+len(fields)))
+		buf := bytes.NewBuffer(make([]byte, 0))
 
 		// Write points.
 		var lastMN int
@@ -352,14 +354,27 @@ func (s *Simulator) generateBatches() <-chan []byte {
 			lastM = append(lastM[:1], []byte(strconv.Itoa(lastMN))...)
 			buf.Write(lastM) // Write measurement
 
-			for j, value := range values {
-				tags = append(tags, fmt.Sprintf(",tag%d=value%d", j, value)...)
-			}
-			buf.Write(tags)
-			tags = tags[:0] // Reset slice but use backing array.
+			// for j, value := range values {
+			// 	tags = append(tags, fmt.Sprintf(",tag%d=value%d", j, value)...)
+			// }
+			// buf.Write(tags)
+			// tags = tags[:0] // Reset slice but use backing array.
 
-			buf.Write(space)  // Write fields.
-			buf.Write(fields) // Write a space.
+			buf.Write(tag)
+
+			buf.Write(space) // Write a space.
+
+			for j, value := range values {
+				var delim string
+				if j > 0 {
+					delim = ","
+				}
+
+				pair := fmt.Sprintf("%sf%d=%d", delim, j, value)
+				fields = append(fields, []byte(pair)...)
+			}
+			buf.Write(fields)   // Write fields.
+			fields = fields[:0] // Reset slice but use backing array.
 
 			if s.timePerSeries != 0 {
 				delta := time.Duration(int64(lastWrittenTotal+i) * s.timePerSeries)
